@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12352f">
+  <title>ارائه خروجی‌های شاخص فشار اقلیمی محیطی</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="">
+
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18332f;
+      --muted: #687b76;
+      --green: #176b55;
+      --green-dark: #10483d;
+      --line: #e2e9e5;
+      --paper: #ffffff;
+      --background: #f4f7f5;
+      --soft: #eaf3ee;
+      --gold: #c89135;
+      --shadow: 0 8px 26px rgba(22, 55, 45, .07);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+      font-family: Tahoma, Arial, sans-serif;
+      line-height: 1.7;
+    }
+
+    .topbar {
+      background: linear-gradient(115deg, var(--green-dark), #1c7058);
+      color: white;
+      padding: 23px max(22px, calc((100vw - 1320px) / 2));
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      max-width: 1320px;
+      margin: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 14px;
+      background: rgba(255,255,255,.12);
+      font-size: 23px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(18px, 2.5vw, 25px);
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 3px 0 0;
+      color: rgba(255,255,255,.78);
+      font-size: 13px;
+    }
+
+    .status {
+      padding: 7px 12px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 999px;
+      color: #f5fffa;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    main {
+      max-width: 1320px;
+      margin: 25px auto 50px;
+      padding: 0 20px;
+    }
+
+    .intro {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .intro h2 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .intro p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .notice {
+      margin: 0 0 18px;
+      padding: 12px 15px;
+      border: 1px solid #e8d7b6;
+      border-radius: 12px;
+      background: #fffaf0;
+      color: #715522;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .map-card { grid-column: span 8; }
+    .control-card { grid-column: span 4; }
+    .trend-card { grid-column: span 7; }
+    .area-card { grid-column: span 5; }
+    .pie-card { grid-column: span 5; }
+    .compare-card { grid-column: span 7; }
+
+    .card-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .card-hint {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .map-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    select, button {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      font-size: 12px;
+    }
+
+    select { padding: 0 10px; }
+
+    button {
+      padding: 0 13px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--green);
+      background: var(--green);
+      color: white;
+    }
+
+    #map {
+      height: 390px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #edf2ef;
+      overflow: hidden;
+    }
+
+    .map-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .control-stack {
+      display: grid;
+      gap: 13px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field select { width: 100%; }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 17px;
+    }
+
+    .kpi {
+      padding: 12px 10px;
+      border-radius: 12px;
+      background: var(--soft);
+    }
+
+    .kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .kpi strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 14px;
+    }
+
+    .chart-placeholder {
+      display: grid;
+      place-items: center;
+      min-height: 235px;
+      padding: 20px;
+      border: 1px dashed #cbd9d1;
+      border-radius: 12px;
+      background: #fbfdfb;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .chart-placeholder b {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink);
+    }
+
+    .compare-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 13px;
+    }
+
+    .compare-controls .field { min-width: 0; }
+
+    #compareMap {
+      position: relative;
+      height: 320px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #edf2ef;
+    }
+
+    #compareMap .compare-placeholder {
+      display: grid;
+      place-items: center;
+      height: 100%;
+      padding: 20px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .compare-range {
+      width: 100%;
+      margin-top: 12px;
+      accent-color: var(--green);
+    }
+
+    footer {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 20px 24px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @media (max-width: 850px) {
+      .map-card, .control-card, .trend-card, .area-card,
+      .pie-card, .compare-card { grid-column: span 12; }
+      #map { height: 340px; }
+    }
+
+    @media (max-width: 520px) {
+      .topbar-inner, .intro { align-items: flex-start; flex-direction: column; }
+      .status { white-space: normal; }
+      main { margin-top: 18px; padding: 0 12px; }
+      .card { padding: 14px; }
+      .kpi-row { grid-template-columns: 1fr; }
+      .map-caption { flex-direction: column; }
+      #map { height: 300px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">◈</div>
+        <div>
+          <h1>ارائه خروجی‌های شاخص فشار اقلیمی محیطی</h1>
+          <p class="subtitle">داشبورد مکانی ـ زمانی استان فارس</p>
+        </div>
+      </div>
+      <div class="status">نسخهٔ پایهٔ داشبورد</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <h2>نمای کلی و تحلیل تغییرات</h2>
+        <p>انتخاب سال، مشاهدهٔ نقشه، روند زمانی، مساحت طبقات و مقایسهٔ دو سال</p>
+      </div>
+    </section>
+
+    <p class="notice">
+      برای جلوگیری از نمایش نادرست، این صفحه تا زمان بارگذاری و بررسی همهٔ GeoTIFFها
+      مقادیر آماری یا نقشهٔ طبقه‌بندی‌شدهٔ ساختگی نمایش نمی‌دهد.
+    </p>
+
+    <section class="grid">
+      <article class="card map-card">
+        <div class="card-heading">
+          <h3>نمایش نقشهٔ شاخص</h3>
+          <span class="card-hint">نقشه با قابلیت جابه‌جایی و بزرگ‌نمایی</span>
+        </div>
+
+        <div class="map-toolbar">
+          <label for="yearSelect">سال / سناریو</label>
+          <select id="yearSelect">
+            <option value="1996">1996</option>
+            <option value="2000">2000</option>
+            <option value="2005">2005</option>
+            <option value="2010">2010</option>
+            <option value="2015">2015</option>
+            <option value="2020">2020</option>
+            <option value="2025">2025</option>
+            <option value="2035_trend">2035 ـ ادامهٔ روند موجود</option>
+            <option value="2035_ssp_mid">2035 ـ سناریوی SSP میانه</option>
+            <option value="2035_ssp_pessimistic">2035 ـ سناریوی SSP بدبینانه</option>
+          </select>
+          <button type="button" class="primary" id="showMapBtn">نمایش انتخاب</button>
+        </div>
+
+        <div id="map" aria-label="نقشهٔ تعاملی استان فارس"></div>
+        <div class="map-caption">
+          <span id="mapStatus">نقشهٔ پایه آماده است؛ لایهٔ GeoTIFF هنوز متصل نشده است.</span>
+          <span>بزرگ‌نمایی: دکمه‌های + و − یا چرخ ماوس</span>
+        </div>
+      </article>
+
+      <aside class="card control-card">
+        <div class="card-heading">
+          <h3>تنظیمات و شاخص‌های منتخب</h3>
+        </div>
+
+        <div class="control-stack">
+          <div class="field">
+            <label for="classSelect">طبقهٔ شاخص</label>
+            <select id="classSelect">
+              <option value="all">همهٔ طبقات</option>
+              <option value="1">طبقهٔ ۱ ـ کم</option>
+              <option value="2">طبقهٔ ۲ ـ متوسط</option>
+              <option value="3">طبقهٔ ۳ ـ زیاد</option>
+              <option value="4">طبقهٔ ۴ ـ بسیار زیاد</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="unitSelect">واحد نمایش مساحت</label>
+            <select id="unitSelect">
+              <option value="km2">کیلومتر مربع</option>
+              <option value="ha">هکتار</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi">
+            <span>سال / سناریوی انتخابی</span>
+            <strong id="selectedPeriod">1996</strong>
+          </div>
+          <div class="kpi">
+            <span>مساحت معتبر</span>
+            <strong id="validArea">—</strong>
+          </div>
+          <div class="kpi">
+            <span>تعداد طبقات</span>
+            <strong>۴ طبقه</strong>
+          </div>
+        </div>
+      </aside>
+
+      <article class="card trend-card">
+        <div class="card-heading">
+          <h3>روند تغییرات در دورهٔ بررسی</h3>
+          <span class="card-hint">مقایسهٔ زمانی و سناریوهای 2035</span>
+        </div>
+        <div class="chart-placeholder">
+          <div>
+            <b>نمودار روند پس از اتصال داده‌ها نمایش داده می‌شود</b>
+            مقادیر باید از GeoTIFFها و محاسبات آماری هر سال استخراج شوند.
+          </div>
+        </div>
+      </article>
+
+      <article class="card area-card">
+        <div class="card-heading">
+          <h3>مساحت طبقات در سال انتخابی</h3>
+          <span class="card-hint">واحد: کیلومتر مربع</span>
+        </div>
+        <div class="chart-placeholder">
+          <div>
+            <b>نمودار مساحت طبقات</b>
+            پس از آماده‌شدن آمار معتبر هر سال پر می‌شود.
+          </div>
+        </div>
+      </article>
+
+      <article class="card pie-card">
+        <div class="card-heading">
+          <h3>سهم هر طبقه از مساحت سال انتخابی</h3>
+          <span class="card-hint">نمودار دایره‌ای</span>
+        </div>
+        <div class="chart-placeholder">
+          <div>
+            <b>نمودار سهم طبقات</b>
+            درصد هر طبقه از مجموع مساحت معتبر محاسبه خواهد شد.
+          </div>
+        </div>
+      </article>
+
+      <article class="card compare-card">
+        <div class="card-heading">
+          <h3>مقایسهٔ کشویی دو سال</h3>
+          <span class="card-hint">حرکت کشویی افقی؛ بزرگ‌نمایی و جابه‌جایی نقشه</span>
+        </div>
+
+        <div class="compare-controls">
+          <div class="field">
+            <label for="yearA">سال / سناریوی اول</label>
+            <select id="yearA">
+              <option value="1996">1996</option>
+              <option value="2000">2000</option>
+              <option value="2005">2005</option>
+              <option value="2010">2010</option>
+              <option value="2015">2015</option>
+              <option value="2020">2020</option>
+              <option value="2025">2025</option>
+              <option value="2035_trend">2035 ـ ادامهٔ روند موجود</option>
+              <option value="2035_ssp_mid">2035 ـ سناریوی SSP میانه</option>
+              <option value="2035_ssp_pessimistic">2035 ـ سناریوی SSP بدبینانه</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="yearB">سال / سناریوی دوم</label>
+            <select id="yearB">
+              <option value="1996">1996</option>
+              <option value="2000">2000</option>
+              <option value="2005">2005</option>
+              <option value="2010">2010</option>
+              <option value="2015">2015</option>
+              <option value="2020" selected>2020</option>
+              <option value="2025">2025</option>
+              <option value="2035_trend">2035 ـ ادامهٔ روند موجود</option>
+              <option value="2035_ssp_mid">2035 ـ سناریوی SSP میانه</option>
+              <option value="2035_ssp_pessimistic">2035 ـ سناریوی SSP بدبینانه</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="compareMap">
+          <div class="compare-placeholder">
+            مقایسهٔ نقشه‌ها بعد از اتصال فایل‌های GeoTIFF فعال می‌شود.
+          </div>
+        </div>
+        <input class="compare-range" id="compareSlider" type="range"
+               min="5" max="95" value="50" aria-label="موقعیت اسلایدر مقایسه">
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    این داشبورد برای نمایش و تحلیل خروجی‌های مکانی شاخص فشار اقلیمی محیطی تهیه شده است.
+  </footer>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+
+  <script>
+    // نقشهٔ پایه فقط برای آماده‌سازی جایگاه تعاملی است.
+    // لایهٔ GeoTIFF و داده‌های آماری پس از دریافت فایل‌های همهٔ سال‌ها متصل می‌شوند.
+    const map = L.map("map", { zoomControl: true }).setView([29.6, 53.0], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    const yearSelect = document.getElementById("yearSelect");
+    const selectedPeriod = document.getElementById("selectedPeriod");
+
+    yearSelect.addEventListener("change", () => {
+      selectedPeriod.textContent =
+        yearSelect.options[yearSelect.selectedIndex].text;
+    });
+
+    document.getElementById("showMapBtn").addEventListener("click", () => {
+      selectedPeriod.textContent =
+        yearSelect.options[yearSelect.selectedIndex].text;
+      document.getElementById("mapStatus").textContent =
+        "انتخاب ثبت شد؛ برای نمایش لایه، فایل GeoTIFF این دوره باید به پروژه اضافه شود.";
+    });
+
+    document.getElementById("compareSlider").addEventListener("input", (event) => {
+      // مقدار اسلایدر برای پیاده‌سازی برش دو لایه پس از اتصال رسترها آماده است.
+      event.target.setAttribute("aria-valuenow", event.target.value);
+    });
+  </script>
+</body>
+</html>
