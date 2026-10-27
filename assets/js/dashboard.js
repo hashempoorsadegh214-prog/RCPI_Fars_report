@@ -1,5 +1,5 @@
-document.addEventListener("DOMContentLoaded", () => {
-    // ایجاد نقشه
+document.addEventListener("DOMContentLoaded", async () => {
+    // ایجاد نقشه Leaflet
     const map = L.map('map').setView([29.5918, 52.5836], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
@@ -10,148 +10,160 @@ document.addEventListener("DOMContentLoaded", () => {
     let trendChart = null;
     let pieChart = null;
 
-    // کاتالوگ دقیق سازگار با نام‌های فایل‌های واقعی موجود در پروژه
+    // کاتالوگ دقیق لایه‌ها و آمار
     const catalog = [
-        { id: "1996", title: "1996", file: "RCPI_Fars_1996.tif", areas: [48250.4, 45120.1, 23810.5, 5320.2] },
-        { id: "2000", title: "2000", file: "RCPI_Fars_2000.tif", areas: [45100.2, 46350.8, 25100.0, 5950.2] },
-        { id: "2005", title: "2005", file: "RCPI_Fars_2005.tif", areas: [41200.0, 48100.5, 26900.3, 6300.4] },
-        { id: "2010", title: "2010", file: "RCPI_Fars_2010.tif", areas: [36500.8, 49800.2, 28700.1, 7500.1] },
-        { id: "2015", title: "2015", file: "RCPI_Fars_2015.tif", areas: [31200.5, 51300.4, 31100.8, 8900.5] },
-        { id: "2020", title: "2020", file: "RCPI_Fars_2020.tif", areas: [26400.1, 52100.3, 33600.2, 10400.6] },
-        { id: "2025", title: "2025", file: "RCPI_Fars_2025.tif", areas: [22100.3, 51800.1, 36200.5, 12400.3] },
-        { id: "2035_trend", title: "2035 - ادامه روند", file: "RCPI_Fars_2035.tif", areas: [15400.2, 48900.5, 41200.1, 17000.4] },
-        { id: "2035_ssp245_mid", title: "2035 - SSP245 میانه", file: "RCPI_Fars_2035_SSP245_Mid.tif", areas: [17800.6, 50200.2, 38900.4, 15600.0] },
-        { id: "2035_ssp585_high", title: "2035 - SSP585 بدبینانه", file: "RCPI_Fars_2035_SSP585_High (1).tif", areas: [12100.5, 46100.0, 43500.8, 20800.9] }
+        { id: "1996", title: "1996", cog_url: "data/layers/RCPI_Fars_1996_cog.tif", stats_json_url: "data/stats/RCPI_Fars_1996_class_stats.json" },
+        { id: "2000", title: "2000", cog_url: "data/layers/RCPI_Fars_2000_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2000_class_stats.json" },
+        { id: "2005", title: "2005", cog_url: "data/layers/RCPI_Fars_2005_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2005_class_stats.json" },
+        { id: "2010", title: "2010", cog_url: "data/layers/RCPI_Fars_2010_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2010_class_stats.json" },
+        { id: "2015", title: "2015", cog_url: "data/layers/RCPI_Fars_2015_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2015_class_stats.json" },
+        { id: "2020", title: "2020", cog_url: "data/layers/RCPI_Fars_2020_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2020_class_stats.json" },
+        { id: "2025", title: "2025", cog_url: "data/layers/RCPI_Fars_2025_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2025_class_stats.json" },
+        { id: "2035_trend", title: "2035 - روند", cog_url: "data/layers/RCPI_Fars_2035_trend_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2035_trend_class_stats.json" },
+        { id: "2035_ssp245_mid", title: "2035 - SSP245", cog_url: "data/layers/RCPI_Fars_2035_ssp245_mid_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2035_ssp245_mid_class_stats.json" },
+        { id: "2035_ssp585_high", title: "2035 - SSP585", cog_url: "data/layers/RCPI_Fars_2035_ssp585_high_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2035_ssp585_high_class_stats.json" }
     ];
 
     const yearSelect = document.getElementById("year-select");
+    const leftSelect = document.getElementById("left-layer-select");
+    const rightSelect = document.getElementById("right-layer-select");
     const statusDiv = document.getElementById("layer-status");
 
-    yearSelect.innerHTML = "";
-    catalog.forEach(item => {
-        let opt = document.createElement("option");
-        opt.value = item.id;
-        opt.textContent = item.title;
-        yearSelect.appendChild(opt);
+    [yearSelect, leftSelect, rightSelect].forEach(select => {
+        if (!select) return;
+        select.innerHTML = "";
+        catalog.forEach(item => {
+            let opt = document.createElement("option");
+            opt.value = item.id;
+            opt.textContent = item.title;
+            select.appendChild(opt);
+        });
     });
 
-    function updateDashboard(id) {
-        const item = catalog.find(x => x.id === id);
+    async function loadData(layerId) {
+        const item = catalog.find(x => x.id === layerId);
         if (!item) return;
 
-        // بروزرسانی جدول مساحت و درصدها
+        statusDiv.innerHTML = `در حال بارگذاری اطلاعات ${item.title}...`;
+
+        // ۱. خواندن فایل JSON آمار واقعی
+        try {
+            const response = await fetch(item.stats_json_url);
+            const stats = await response.json();
+            updateTableAndCharts(stats, item.title);
+            statusDiv.innerHTML = `آمار <b>${item.title}</b> بارگذاری شد. در حال بارگذاری نقشه...`;
+        } catch (e) {
+            console.error("خطا در خواندن فایل آمار JSON:", e);
+            statusDiv.innerHTML = `خطا در خواندن آمار ${item.title}`;
+        }
+
+        // ۲. بارگذاری لایه رستر COG
+        try {
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+                currentLayer = null;
+            }
+
+            const resp = await fetch(item.cog_url);
+            const buf = await resp.arrayBuffer();
+            const geotiff = await parseGeotiff(buf);
+
+            const layer = new GeoRasterLayer({
+                geotiff: geotiff,
+                resolution: 64,
+                opacity: 0.85,
+                pixelValuesToColorFn: values => {
+                    const val = values[1] !== undefined ? values[1] : values[0]; // باند کلاس (باند 2)
+                    if (val === 1) return '#22c55e'; // کم
+                    if (val === 2) return '#eab308'; // متوسط
+                    if (val === 3) return '#f97316'; // زیاد
+                    if (val === 4) return '#991b1b'; // بسیار زیاد
+                    return null;
+                }
+            });
+
+            layer.addTo(map);
+            currentLayer = layer;
+            if (layer.getBounds()) {
+                map.fitBounds(layer.getBounds());
+            }
+            statusDiv.innerHTML = `لایه <b>${item.title}</b> با موفقیت نمایش داده شد.`;
+        } catch (err) {
+            console.error("خطا در بارگذاری رستر نقشه:", err);
+            statusDiv.innerHTML += `<br>خطا در رسم لایه روی نقشه.`;
+        }
+    }
+
+    function updateTableAndCharts(stats, title) {
         const tbody = document.getElementById("stats-tbody");
         tbody.innerHTML = "";
-        const labels = ["کم", "متوسط", "زیاد", "بسیار زیاد"];
-        const totalArea = item.areas.reduce((a, b) => a + b, 0);
 
-        item.areas.forEach((area, index) => {
-            const pct = ((area / totalArea) * 100).toFixed(1);
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${labels[index]}</td>
-                <td>${Math.round(area).toLocaleString('fa-IR')}</td>
-                <td>${pct}٪</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        let labels = [];
+        let areas = [];
+        let percentages = [];
 
-        // بروزرسانی نمودار دایره‌ای (Donut Chart)
+        // پشتیبانی کامل از ساختار استاندارد فایل‌های JSON شما (آرایه classes)
+        if (stats.classes && Array.isArray(stats.classes)) {
+            stats.classes.forEach(cls => {
+                labels.push(cls.label_fa || `کد ${cls.class}`);
+                areas.push(cls.area_km2 || 0);
+                percentages.push(cls.percent_of_valid_class_area || cls.percent || 0);
+
+                let tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${cls.label_fa || ('کد ' + cls.class)}</td>
+                    <td>${Number(cls.area_km2 || 0).toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
+                    <td>${Number(cls.percent_of_valid_class_area || cls.percent || 0).toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // بروزرسانی نمودار دایره‌ای
         const pieCtx = document.getElementById('pieChart').getContext('2d');
         if (pieChart) pieChart.destroy();
         pieChart = new Chart(pieCtx, {
             type: 'doughnut',
             data: {
-                labels: labels,
+                labels: labels.length ? labels : ["کم", "متوسط", "زیاد", "بسیار زیاد"],
                 datasets: [{
-                    data: item.areas,
-                    backgroundColor: ['#22c55e', '#eab308', '#f97316', '#991b1b'],
-                    borderWidth: 1
+                    data: areas.length ? areas : [1, 1, 1, 1],
+                    backgroundColor: ['#22c55e', '#eab308', '#f97316', '#991b1b']
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'left', labels: { boxWidth: 12, font: { family: 'Vazirmatn, Tahoma', size: 10 } } }
+                    legend: { position: 'left', labels: { boxWidth: 10, font: { size: 10 } } }
                 }
             }
         });
 
-        statusDiv.innerHTML = `اطلاعات لایه <b>${item.title}</b> بارگذاری شد.`;
-        loadRasterLayer(item.file);
-    }
-
-    async function loadRasterLayer(fileName) {
-        if (typeof parseGeoraster === 'undefined' || typeof GeoRasterLayer === 'undefined') return;
-        try {
-            if (currentLayer) {
-                map.removeLayer(currentLayer);
-            }
-            const response = await fetch(fileName);
-            if (!response.ok) throw new Error("فایل یافت نشد");
-            const arrayBuffer = await response.arrayBuffer();
-            const georaster = await parseGeoraster(arrayBuffer);
-            
-            currentLayer = new GeoRasterLayer({
-                georaster: georaster,
-                opacity: 0.8,
-                pixelValuesToColorFn: values => {
-                    const val = Math.round(values[0]);
-                    if (val === 1) return '#22c55e';
-                    if (val === 2) return '#eab308';
-                    if (val === 3) return '#f97316';
-                    if (val === 4) return '#991b1b';
-                    return null;
-                },
-                resolution: 128
-            });
-            currentLayer.addTo(map);
-            map.fitBounds(currentLayer.getBounds());
-        } catch (e) {
-            statusDiv.innerHTML += `<br><span style="color:#b91c1c;">(خطا در بارگذاری رستر نقشه)</span>`;
-        }
-    }
-
-    // رسم نمودار روند زمانی کل دوره
-    function renderTrendChart() {
+        // بروزرسانی نمودار روند
         const trendCtx = document.getElementById('trendChart').getContext('2d');
         if (trendChart) trendChart.destroy();
-        
-        const criticalAreas = catalog.map(item => Math.round(item.areas[2] + item.areas[3]));
-
         trendChart = new Chart(trendCtx, {
             type: 'line',
             data: {
                 labels: catalog.map(x => x.title),
                 datasets: [{
-                    label: 'مساحت طبقات بحرانی (زیاد و بسیار زیاد - km²)',
-                    data: criticalAreas,
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    label: 'مساحت کل معتبر (کیلومترمربع)',
+                    data: catalog.map((_, i) => stats.total_valid_area_km2 || 125000),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
-                    tension: 0.3,
-                    pointRadius: 4
+                    tension: 0.2
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { labels: { font: { family: 'Vazirmatn, Tahoma', size: 11 } } }
-                },
-                scales: {
-                    y: { ticks: { callback: value => Number(value).toLocaleString('fa-IR') } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
     yearSelect.addEventListener("change", (e) => {
-        updateDashboard(e.target.value);
+        loadData(e.target.value);
     });
 
-    renderTrendChart();
-    updateDashboard("1996");
-    yearSelect.value = "1996";
+    // بارگذاری اولیه پیش‌فرض روی اولین سال
+    loadData(catalog[0].id);
 });
