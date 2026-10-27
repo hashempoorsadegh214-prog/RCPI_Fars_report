@@ -1,112 +1,72 @@
-{
-  "title_fa": "ارائه خروجی‌های شاخص فشار اقلیمی محیطی",
-  "title_en": "Environmental Climate Pressure Index Outputs Dashboard",
-  "classes": [
-    { "id": 1, "key": "low", "label_fa": "کم", "label_en": "Low", "color": "#2E8B57" },
-    { "id": 2, "key": "moderate", "label_fa": "متوسط", "label_en": "Moderate", "color": "#FFD166" },
-    { "id": 3, "key": "high", "label_fa": "زیاد", "label_en": "High", "color": "#F4A261" },
-    { "id": 4, "key": "very_high", "label_fa": "بسیار زیاد", "label_en": "Very High", "color": "#D62828" }
-  ],
-  "layers": [
-    {
-      "id": "1996",
-      "year": 1996,
-      "type": "historical",
-      "label_fa": "1996",
-      "label_en": "1996",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_1996_cog.tif",
-      "stats": "data/stats/RCPI_Fars_1996_class_stats.json"
-    },
-    {
-      "id": "2000",
-      "year": 2000,
-      "type": "historical",
-      "label_fa": "2000",
-      "label_en": "2000",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_2000_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2000_class_stats.json"
-    },
-    {
-      "id": "2005",
-      "year": 2005,
-      "type": "historical",
-      "label_fa": "2005",
-      "label_en": "2005",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_2005_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2005_class_stats.json"
-    },
-    {
-      "id": "2010",
-      "year": 2010,
-      "type": "historical",
-      "label_fa": "2010",
-      "label_en": "2010",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_2010_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2010_class_stats.json"
-    },
-    {
-      "id": "2015",
-      "year": 2015,
-      "type": "historical",
-      "label_fa": "2015",
-      "label_en": "2015",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_2015_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2015_class_stats.json"
-    },
-    {
-      "id": "2020",
-      "year": 2020,
-      "type": "historical",
-      "label_fa": "2020",
-      "label_en": "2020",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_2020_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2020_class_stats.json"
-    },
-    {
-      "id": "2025",
-      "year": 2025,
-      "type": "historical",
-      "label_fa": "2025",
-      "label_en": "2025",
-      "scenario": "observed",
-      "raster": "data/layers/RCPI_Fars_2025_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2025_class_stats.json"
-    },
-    {
-      "id": "2035_trend",
-      "year": 2035,
-      "type": "forecast",
-      "label_fa": "2035 - ادامه روند موجود",
-      "label_en": "2035 - Trend Continuation",
-      "scenario": "trend",
-      "raster": "data/layers/RCPI_Fars_2035_trend_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2035_trend_class_stats.json"
-    },
-    {
-      "id": "2035_ssp245_mid",
-      "year": 2035,
-      "type": "forecast",
-      "label_fa": "2035 - SSP میانه",
-      "label_en": "2035 - SSP245 Mid",
-      "scenario": "ssp245_mid",
-      "raster": "data/layers/RCPI_Fars_2035_ssp245_mid_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2035_ssp245_mid_class_stats.json"
-    },
-    {
-      "id": "2035_ssp585_high",
-      "year": 2035,
-      "type": "forecast",
-      "label_fa": "2035 - SSP بدبینانه",
-      "label_en": "2035 - SSP585 High",
-      "scenario": "ssp585_high",
-      "raster": "data/layers/RCPI_Fars_2035_ssp585_high_cog.tif",
-      "stats": "data/stats/RCPI_Fars_2035_ssp585_high_class_stats.json"
-    }
-  ]
-}
+[
+  {
+    "id": "1996",
+    "title": "1996",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_1996_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_1996_class_stats.json"
+  },
+  {
+    "id": "2000",
+    "title": "2000",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_2000_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2000_class_stats.json"
+  },
+  {
+    "id": "2005",
+    "title": "2005",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_2005_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2005_class_stats.json"
+  },
+  {
+    "id": "2010",
+    "title": "2010",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_2010_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2010_class_stats.json"
+  },
+  {
+    "id": "2015",
+    "title": "2015",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_2015_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2015_class_stats.json"
+  },
+  {
+    "id": "2020",
+    "title": "2020",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_2020_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2020_class_stats.json"
+  },
+  {
+    "id": "2025",
+    "title": "2025",
+    "type": "Historical",
+    "cog_url": "data/layers/RCPI_Fars_2025_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2025_class_stats.json"
+  },
+  {
+    "id": "2035_trend",
+    "title": "2035 - ادامه روند موجود",
+    "type": "Forecast (Trend)",
+    "cog_url": "data/layers/RCPI_Fars_2035_trend_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2035_trend_class_stats.json"
+  },
+  {
+    "id": "2035_ssp245_mid",
+    "title": "2035 - SSP245 میانه",
+    "type": "Forecast (SSP245)",
+    "cog_url": "data/layers/RCPI_Fars_2035_ssp245_mid_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2035_ssp245_mid_class_stats.json"
+  },
+  {
+    "id": "2035_ssp585_high",
+    "title": "2035 - SSP585 بدبینانه",
+    "type": "Forecast (SSP585)",
+    "cog_url": "data/layers/RCPI_Fars_2035_ssp585_high_cog.tif",
+    "stats_json_url": "data/stats/RCPI_Fars_2035_ssp585_high_class_stats.json"
+  }
+]
