@@ -1,94 +1,213 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ارائه خروجی‌های شاخص فشار اقلیمی محیطی</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ارائه خروجی‌های شاخص فشار اقلیمی محیطی</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Side-by-Side CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-side-by-side@2.4.0/leaflet-side-by-side.min.css" />
+    
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3b82f6;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Tahoma, system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 10px;
+            font-size: 12px;
+        }
+        .container {
+            max-width: 1560px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        header {
+            background: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border-right: 4px solid var(--primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.1rem; margin: 0; color: var(--primary); }
+        header span { font-size: 0.8rem; color: #64748b; }
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr 290px;
+            gap: 10px;
+            align-items: start;
+        }
+        @media (max-width: 1100px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+        }
+        .card h3 {
+            font-size: 0.85rem;
+            margin: 0 0 8px 0;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+        .form-group { margin-bottom: 8px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 3px; font-size: 0.75rem; }
+        .form-control {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.8rem;
+        }
+        .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 4px;
+            width: 100%;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .btn:hover { background: var(--primary); }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-side-by-side/leaflet-side-by-side.css" />
-  <link rel="stylesheet" href="assets/css/style.css" />
+        #map {
+            height: 380px;
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 0.78rem; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+        
+        table.stats-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        table.stats-table th, table.stats-table td { padding: 4px; border-bottom: 1px solid var(--border); text-align: right; }
+        table.stats-table th { background: #f1f5f9; color: var(--primary); }
+
+        .chart-box { height: 160px; position: relative; }
+        .pie-box { height: 150px; position: relative; }
+    </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="app-header">
-      <div>
+
+<div class="container">
+    <header>
         <h1>ارائه خروجی‌های شاخص فشار اقلیمی محیطی</h1>
-        <p>Environmental Climate Pressure Index Outputs Dashboard</p>
-      </div>
+        <span>Environmental Climate Pressure Index Outputs Dashboard</span>
     </header>
 
-    <main class="dashboard-grid">
-      <section class="panel control-panel">
-        <h2>کنترل لایه‌ها</h2>
+    <div class="dashboard-grid">
+        <!-- ستون سمت راست: کنترل لایه‌ها و راهنما -->
+        <div>
+            <div class="card">
+                <h3>کنترل لایه‌ها</h3>
+                <div class="form-group">
+                    <label>انتخاب سال / سناریو</label>
+                    <select id="year-select" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <button id="toggle-compare" class="btn">فعال‌سازی مقایسه کشویی</button>
+                </div>
+                <div id="compare-controls" style="display:none; border-top: 1px dashed var(--border); padding-top: 6px; margin-top: 6px;">
+                    <div class="form-group">
+                        <label>مقایسه - لایه چپ</label>
+                        <select id="left-layer-select" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>مقایسه - لایه راست</label>
+                        <select id="right-layer-select" class="form-control"></select>
+                    </div>
+                </div>
+            </div>
 
-        <label for="yearSelect">انتخاب سال / سناریو</label>
-        <select id="yearSelect"></select>
+            <div class="card">
+                <h3>راهنمای طبقات</h3>
+                <div class="legend-item"><div class="legend-color" style="background:#22c55e;"></div> کم (Low)</div>
+                <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> متوسط (Moderate)</div>
+                <div class="legend-item"><div class="legend-color" style="background:#f97316;"></div> زیاد (High)</div>
+                <div class="legend-item"><div class="legend-color" style="background:#991b1b;"></div> بسیار زیاد (Very High)</div>
+            </div>
 
-        <label for="compareLeft">مقایسه - لایه چپ</label>
-        <select id="compareLeft"></select>
-
-        <label for="compareRight">مقایسه - لایه راست</label>
-        <select id="compareRight"></select>
-
-        <button id="compareToggle">فعال‌سازی مقایسه کشویی</button>
-
-        <div class="legend-box">
-          <h3>راهنمای طبقات</h3>
-          <ul id="legendList"></ul>
+            <div class="card">
+                <h3>خلاصه لایه</h3>
+                <div id="layer-status" style="font-size: 0.78rem; line-height: 1.4; color: #475569;">در حال بارگذاری...</div>
+            </div>
         </div>
 
-        <div class="summary-box">
-          <h3>خلاصه لایه</h3>
-          <div id="layerSummary">در حال بارگذاری...</div>
+        <!-- ستون وسط: نقشه و نمودار روند -->
+        <div>
+            <div class="card">
+                <h3>نمایش مکانی شاخص</h3>
+                <div id="map"></div>
+            </div>
+            <div class="card">
+                <h3>روند تغییرات زمانی کلاس‌ها و سناریوها</h3>
+                <div class="chart-box">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
         </div>
-      </section>
 
-      <section class="panel map-panel">
-        <div class="panel-title-row">
-          <h2>نمایش مکانی شاخص</h2>
-          <span id="activeLayerLabel" class="badge">-</span>
+        <!-- ستون سمت چپ: جدول آمار و نمودار دایره‌ای -->
+        <div>
+            <div class="card">
+                <h3>مساحت و درصد طبقات</h3>
+                <div style="max-height: 140px; overflow-y: auto; margin-bottom: 6px;">
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>طبقه</th>
+                                <th>مساحت (km²)</th>
+                                <th>درصد</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="pie-box">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
         </div>
-        <div id="map"></div>
-      </section>
+    </div>
+</div>
 
-      <section class="panel chart-panel">
-        <h2>روند تغییرات کلاس‌ها</h2>
-        <canvas id="trendChart"></canvas>
-      </section>
+<!-- Leaflet & Plugins JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/geotiff@2.1.3/dist/geotiff.bundle.js"></script>
+<script src="https://unpkg.com/plotty@0.4.4/dist/plotty.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@3.9.0/dist/georaster-layer-for-leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-side-by-side@2.4.0/leaflet-side-by-side.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-      <section class="panel stats-panel">
-        <h2>مساحت و درصد طبقات</h2>
-        <div class="stats-layout">
-          <div class="table-wrap">
-            <table id="statsTable">
-              <thead>
-                <tr>
-                  <th>طبقه</th>
-                  <th>مساحت (km²)</th>
-                  <th>درصد</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div class="pie-wrap">
-            <canvas id="pieChart"></canvas>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/georaster"></script>
-  <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
-  <script src="https://unpkg.com/leaflet-side-by-side"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="assets/js/dashboard.js"></script>
+<!-- Main Dashboard Logic -->
+<script src="assets/js/dashboard.js"></script>
 </body>
 </html>
