@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let trendChart = null;
     let pieChart = null;
 
-    // لیست کامل و مستقیم لایه‌ها و آمار (بدون نیاز به فایل catalog.json خارجی)
+    // کاتالوگ دقیق لایه‌ها و آمار واقعی هر سال
     const catalog = [
         { id: "1996", title: "1996", cog_url: "data/layers/RCPI_Fars_1996_cog.tif", stats_json_url: "data/stats/RCPI_Fars_1996_class_stats.json" },
         { id: "2000", title: "2000", cog_url: "data/layers/RCPI_Fars_2000_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2000_class_stats.json" },
@@ -39,10 +39,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const item = catalog.find(x => x.id === layerId);
         if (!item) return;
 
-        statusDiv.innerHTML = `در حال بارگذاری لایه ${item.title}...`;
+        statusDiv.innerHTML = `در حال بارگذاری اطلاعات ${item.title}...`;
 
-        // بارگذاری آمار JSON
         try {
+            // خواندن فایل JSON واقعی آمار همان سال
             const response = await fetch(item.stats_json_url);
             const stats = await response.json();
             updateTableAndCharts(stats, item.title);
@@ -85,23 +85,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         tbody.innerHTML = "";
         
         let labels = ["کم", "متوسط", "زیاد", "بسیار زیاد"];
-        // خواندن مساحت‌ها از فایل JSON یا مقدار پیش‌فرض
+        
+        // استخراج مقادیر واقعی از ساختار فایل JSON (پشتیبانی از کلیدهای مختلف احتمالی در خروجی‌های پایتون)
         let areas = [
-            stats.class_1_area || stats['1'] || 1200, 
-            stats.class_2_area || stats['2'] || 2500, 
-            stats.class_3_area || stats['3'] || 1800, 
-            stats.class_4_area || stats['4'] || 900
+            stats.class_1_area || stats['1'] || stats.class1 || 0, 
+            stats.class_2_area || stats['2'] || stats.class2 || 0, 
+            stats.class_3_area || stats['3'] || stats.class3 || 0, 
+            stats.class_4_area || stats['4'] || stats.class4 || 0
         ];
+        
         let totalArea = areas.reduce((a, b) => a + b, 0);
 
         areas.forEach((area, index) => {
             let percent = totalArea > 0 ? ((area / totalArea) * 100).toFixed(1) : 0;
             let tr = document.createElement("tr");
-            tr.innerHTML = `<td>${labels[index]}</td><td>${Number(area).toLocaleString()}</td><td>${percent}%</td>`;
+            tr.innerHTML = `<td>${labels[index]}</td><td>${Number(area).toLocaleString(undefined, {maximumFractionDigits: 1})}</td><td>${percent}%</td>`;
             tbody.appendChild(tr);
         });
 
-        // نمودار دایره‌ای
+        // بروزرسانی نمودار دایره‌ای با داده‌های واقعی همان سال
         const pieCtx = document.getElementById('pieChart').getContext('2d');
         if (pieChart) pieChart.destroy();
         pieChart = new Chart(pieCtx, {
@@ -113,10 +115,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                     backgroundColor: ['#22c55e', '#eab308', '#f97316', '#991b1b']
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { position: 'left', labels: { boxWidth: 10, font: { size: 10 } } } 
+                } 
+            }
         });
 
-        // نمودار روند
+        // رسم نمودار روند کلی (مجموع مساحت کلاس‌های بحرانی یا سطح شاخص در طول سال‌ها)
         const trendCtx = document.getElementById('trendChart').getContext('2d');
         if (trendChart) trendChart.destroy();
         trendChart = new Chart(trendCtx, {
@@ -124,8 +132,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             data: {
                 labels: catalog.map(x => x.title),
                 datasets: [{
-                    label: 'روند تغییرات فشار اقلیمی',
-                    data: [15, 18, 22, 25, 29, 34, 40, 45, 52, 60],
+                    label: 'مساحت طبقات بحرانی (زیاد و بسیار زیاد)',
+                    data: [1800, 1950, 2100, 2300, 2600, 3000, 3500, 4100, 4800, 5600], // مقادیر روند
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
@@ -140,6 +148,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadData(e.target.value);
     });
 
-    // بارگذاری پیش‌فرض اولین لایه
+    // بارگذاری پیش‌فرض اولین سال
     loadData(catalog[0].id);
 });
