@@ -1,0 +1,31 @@
+{
+  "year": 2010,
+  "scenario": "observed",
+  "total_valid_km2": 125129.17,
+  "classes": [
+    {
+      "id": 1,
+      "label": "کم",
+      "area_km2": 10694.62,
+      "percent": 8.55
+    },
+    {
+      "id": 2,
+      "label": "متوسط",
+      "area_km2": 20264.13,
+      "percent": 16.19
+    },
+    {
+      "id": 3,
+      "label": "زیاد",
+      "area_km2": 29743.57,
+      "percent": 23.77
+    },
+    {
+      "id": 4,
+      "label": "بسیار زیاد",
+      "area_km2": 64426.84,
+      "percent": 51.49
+    }
+  ]
+}

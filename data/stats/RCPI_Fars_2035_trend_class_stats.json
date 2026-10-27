@@ -1,0 +1,31 @@
+{
+  "year": 2035,
+  "scenario": "trend",
+  "total_valid_km2": 62564.58,
+  "classes": [
+    {
+      "id": 1,
+      "label": "کم",
+      "area_km2": 10176.33,
+      "percent": 16.27
+    },
+    {
+      "id": 2,
+      "label": "متوسط",
+      "area_km2": 12254.28,
+      "percent": 19.59
+    },
+    {
+      "id": 3,
+      "label": "زیاد",
+      "area_km2": 16054.91,
+      "percent": 25.66
+    },
+    {
+      "id": 4,
+      "label": "بسیار زیاد",
+      "area_km2": 24079.06,
+      "percent": 38.48
+    }
+  ]
+}

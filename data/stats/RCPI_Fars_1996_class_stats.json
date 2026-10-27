@@ -1,0 +1,77 @@
+{
+  "year": 1996,
+  "source_file": "RCPI_Fars_1996.tif",
+  "band_mapping": {
+    "RCPI": 1,
+    "CLASS": 2,
+    "TPPI": 3,
+    "HEDI": 4
+  },
+  "crs": "EPSG:4326",
+  "method": "spherical-excess geodesic pixel area (R=6371008.8 m IUGG mean radius), latitude-dependent per pixel row; NaN/masked/non-class values excluded",
+  "classes": [
+    {
+      "class": 1,
+      "label_en": "Low",
+      "label_fa": "کم",
+      "pixel_count": 6998,
+      "area_km2": 6059.5853,
+      "percent_of_valid_class_area": 4.8427
+    },
+    {
+      "class": 2,
+      "label_en": "Medium",
+      "label_fa": "متوسط",
+      "pixel_count": 13251,
+      "area_km2": 11474.127,
+      "percent_of_valid_class_area": 9.1698
+    },
+    {
+      "class": 3,
+      "label_en": "High",
+      "label_fa": "زیاد",
+      "pixel_count": 31437,
+      "area_km2": 27279.6791,
+      "percent_of_valid_class_area": 21.8012
+    },
+    {
+      "class": 4,
+      "label_en": "Very High",
+      "label_fa": "بسیار زیاد",
+      "pixel_count": 91955,
+      "area_km2": 80315.776,
+      "percent_of_valid_class_area": 64.1863
+    }
+  ],
+  "total_valid_pixels": 143641,
+  "total_valid_area_km2": 125129.1673,
+  "checks": {
+    "percent_sum": 100.0,
+    "pixel_count_sum_equals_total": true,
+    "excluded_nan_or_masked_pixels": 157607,
+    "non_class_finite_pixels": 0,
+    "per_band_full_res_equality": [
+      {
+        "band": 1,
+        "equal_full_res_including_NaN": true,
+        "nan_count": 157607
+      },
+      {
+        "band": 2,
+        "equal_full_res_including_NaN": true,
+        "nan_count": 157607
+      },
+      {
+        "band": 3,
+        "equal_full_res_including_NaN": true,
+        "nan_count": 157607
+      },
+      {
+        "band": 4,
+        "equal_full_res_including_NaN": true,
+        "nan_count": 157607
+      }
+    ],
+    "all_bands_equal_including_NaN": true
+  }
+}
