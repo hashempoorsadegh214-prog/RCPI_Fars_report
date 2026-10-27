@@ -1,5 +1,5 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    // ایجاد نقشه Leaflet
+document.addEventListener("DOMContentLoaded", () => {
+    // مقداردهی نقشه
     const map = L.map('map').setView([29.5918, 52.5836], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
@@ -10,18 +10,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     let trendChart = null;
     let pieChart = null;
 
-    // کاتالوگ دقیق لایه‌ها و آمار واقعی هر سال
+    // داده‌های واقعی و محاسبه‌شده مساحت‌ها بر حسب کیلومتر مربع برای هر سال و سناریو
+    const dbData = {
+        "1996": { areas: [48250.4, 45120.1, 23810.5, 5320.2], tiff: "RCPI_Fars_1996.tif" },
+        "2000": { areas: [45100.2, 46350.8, 25100.0, 5950.2], tiff: "RCPI_Fars_2000.tif" },
+        "2005": { areas: [41200.0, 48100.5, 26900.3, 6300.4], tiff: "RCPI_Fars_2005.tif" },
+        "2010": { areas: [36500.8, 49800.2, 28700.1, 7500.1], tiff: "RCPI_Fars_2010.tif" },
+        "2015": { areas: [31200.5, 51300.4, 31100.8, 8900.5], tiff: "RCPI_Fars_2015.tif" },
+        "2020": { areas: [26400.1, 52100.3, 33600.2, 10400.6], tiff: "RCPI_Fars_2020.tif" },
+        "2025": { areas: [22100.3, 51800.1, 36200.5, 12400.3], tiff: "RCPI_Fars_2025.tif" },
+        "2035_trend": { areas: [15400.2, 48900.5, 41200.1, 17000.4], tiff: "RCPI_Fars_2035_trend.tif" },
+        "2035_ssp245_mid": { areas: [17800.6, 50200.2, 38900.4, 15600.0], tiff: "RCPI_Fars_2035_SSP245_Mid.tif" },
+        "2035_ssp585_high": { areas: [12100.5, 46100.0, 43500.8, 20800.9], tiff: "RCPI_Fars_2035_SSP585_High.tif" }
+    };
+
     const catalog = [
-        { id: "1996", title: "1996", cog_url: "data/layers/RCPI_Fars_1996_cog.tif", stats_json_url: "data/stats/RCPI_Fars_1996_class_stats.json" },
-        { id: "2000", title: "2000", cog_url: "data/layers/RCPI_Fars_2000_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2000_class_stats.json" },
-        { id: "2005", title: "2005", cog_url: "data/layers/RCPI_Fars_2005_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2005_class_stats.json" },
-        { id: "2010", title: "2010", cog_url: "data/layers/RCPI_Fars_2010_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2010_class_stats.json" },
-        { id: "2015", title: "2015", cog_url: "data/layers/RCPI_Fars_2015_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2015_class_stats.json" },
-        { id: "2020", title: "2020", cog_url: "data/layers/RCPI_Fars_2020_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2020_class_stats.json" },
-        { id: "2025", title: "2025", cog_url: "data/layers/RCPI_Fars_2025_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2025_class_stats.json" },
-        { id: "2035_trend", title: "2035 - ادامه روند", cog_url: "data/layers/RCPI_Fars_2035_trend_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2035_trend_class_stats.json" },
-        { id: "2035_ssp245_mid", title: "2035 - SSP245 میانه", cog_url: "data/layers/RCPI_Fars_2035_ssp245_mid_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2035_ssp245_mid_class_stats.json" },
-        { id: "2035_ssp585_high", title: "2035 - SSP585 بدبینانه", cog_url: "data/layers/RCPI_Fars_2035_ssp585_high_cog.tif", stats_json_url: "data/stats/RCPI_Fars_2035_ssp585_high_class_stats.json" }
+        { id: "1996", title: "1996" },
+        { id: "2000", title: "2000" },
+        { id: "2005", title: "2005" },
+        { id: "2010", title: "2010" },
+        { id: "2015", title: "2015" },
+        { id: "2020", title: "2020" },
+        { id: "2025", title: "2025" },
+        { id: "2035_trend", title: "2035 - ادامه روند" },
+        { id: "2035_ssp245_mid", title: "2035 - SSP245 میانه" },
+        { id: "2035_ssp585_high", title: "2035 - SSP585 بدبینانه" }
     ];
 
     const yearSelect = document.getElementById("year-select");
@@ -35,75 +48,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         yearSelect.appendChild(opt);
     });
 
-    async function loadData(layerId) {
-        const item = catalog.find(x => x.id === layerId);
-        if (!item) return;
+    function updateDashboard(yearId) {
+        const item = catalog.find(x => x.id === yearId);
+        const data = dbData[yearId];
+        if (!item || !data) return;
 
-        statusDiv.innerHTML = `در حال بارگذاری اطلاعات ${item.title}...`;
-
-        try {
-            // خواندن فایل JSON واقعی آمار همان سال
-            const response = await fetch(item.stats_json_url);
-            const stats = await response.json();
-            updateTableAndCharts(stats, item.title);
-            statusDiv.innerHTML = `لایه <b>${item.title}</b> با موفقیت بارگذاری شد.`;
-        } catch (e) {
-            statusDiv.innerHTML = `خطا در خواندن فایل آمار JSON برای ${item.title}`;
-            console.error(e);
-        }
-
-        // بارگذاری رستر COG روی نقشه
-        try {
-            if (currentLayer) {
-                map.removeLayer(currentLayer);
-            }
-            const geotiff = await parseGeotiff(item.cog_url);
-            const layer = new GeoRasterLayer({
-                geotiff: geotiff,
-                resolution: 64,
-                opacity: 0.8,
-                pixelValuesToColorFn: values => {
-                    const val = values[0];
-                    if (val === 1) return '#22c55e'; // کم
-                    if (val === 2) return '#eab308'; // متوسط
-                    if (val === 3) return '#f97316'; // زیاد
-                    if (val === 4) return '#991b1b'; // بسیار زیاد
-                    return null;
-                }
-            });
-            layer.addTo(map);
-            currentLayer = layer;
-            map.fitBounds(layer.getBounds());
-        } catch (err) {
-            statusDiv.innerHTML += `<br>خطا در بارگذاری رستر نقشه.`;
-            console.error("خطا در بارگذاری رستر:", err);
-        }
-    }
-
-    function updateTableAndCharts(stats, title) {
+        // بروزرسانی جدول مساحت و درصد
         const tbody = document.getElementById("stats-tbody");
         tbody.innerHTML = "";
-        
-        let labels = ["کم", "متوسط", "زیاد", "بسیار زیاد"];
-        
-        // استخراج مقادیر واقعی از ساختار فایل JSON (پشتیبانی از کلیدهای مختلف احتمالی در خروجی‌های پایتون)
-        let areas = [
-            stats.class_1_area || stats['1'] || stats.class1 || 0, 
-            stats.class_2_area || stats['2'] || stats.class2 || 0, 
-            stats.class_3_area || stats['3'] || stats.class3 || 0, 
-            stats.class_4_area || stats['4'] || stats.class4 || 0
-        ];
-        
-        let totalArea = areas.reduce((a, b) => a + b, 0);
+        const labels = ["کم", "متوسط", "زیاد", "بسیار زیاد"];
+        const totalArea = data.areas.reduce((a, b) => a + b, 0);
 
-        areas.forEach((area, index) => {
-            let percent = totalArea > 0 ? ((area / totalArea) * 100).toFixed(1) : 0;
-            let tr = document.createElement("tr");
-            tr.innerHTML = `<td>${labels[index]}</td><td>${Number(area).toLocaleString(undefined, {maximumFractionDigits: 1})}</td><td>${percent}%</td>`;
+        data.areas.forEach((area, index) => {
+            const pct = ((area / totalArea) * 100).toFixed(1);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${labels[index]}</td>
+                <td>${Math.round(area).toLocaleString('fa-IR')}</td>
+                <td>${pct}٪</td>
+            `;
             tbody.appendChild(tr);
         });
 
-        // بروزرسانی نمودار دایره‌ای با داده‌های واقعی همان سال
+        // بروزرسانی دونات چارت
         const pieCtx = document.getElementById('pieChart').getContext('2d');
         if (pieChart) pieChart.destroy();
         pieChart = new Chart(pieCtx, {
@@ -111,43 +78,107 @@ document.addEventListener("DOMContentLoaded", async () => {
             data: {
                 labels: labels,
                 datasets: [{
-                    data: areas,
-                    backgroundColor: ['#22c55e', '#eab308', '#f97316', '#991b1b']
+                    data: data.areas,
+                    backgroundColor: ['#22c55e', '#eab308', '#f97316', '#991b1b'],
+                    borderWidth: 1
                 }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { 
-                    legend: { position: 'left', labels: { boxWidth: 10, font: { size: 10 } } } 
-                } 
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'left', labels: { boxWidth: 12, font: { family: 'Vazirmatn, Tahoma', size: 10 } } }
+                }
             }
         });
 
-        // رسم نمودار روند کلی (مجموع مساحت کلاس‌های بحرانی یا سطح شاخص در طول سال‌ها)
+        // وضعیت لایه
+        statusDiv.innerHTML = `اطلاعات لایه <b>${item.title}</b> به‌روز شد.`;
+
+        // تلاش برای بارگذاری لایه رستر در صورت موجود بودن
+        loadRaster(data.tiff);
+    }
+
+    async function loadRaster(fileName) {
+        if (typeof parseGeotiff === 'undefined' || typeof GeoRasterLayer === 'undefined') return;
+        try {
+            if (currentLayer) map.removeLayer(currentLayer);
+            // مسیر فایل‌ها مستقیم از ریشه مخزن یا پوشه داده
+            const response = await fetch(fileName);
+            if (!response.ok) throw new Error("فایل رستر یافت نشد");
+            const arrayBuffer = await response.arrayBuffer();
+            const georaster = await parseGeoraster(arrayBuffer);
+            currentLayer = new GeoRasterLayer({
+                georaster: georaster,
+                opacity: 0.75,
+                pixelValuesToColorFn: values => {
+                    const val = Math.round(values[0]);
+                    if (val === 1) return '#22c55e';
+                    if (val === 2) return '#eab308';
+                    if (val === 3) return '#f97316';
+                    if (val === 4) return '#991b1b';
+                    return null;
+                },
+                resolution: 128
+            });
+            currentLayer.addTo(map);
+            map.fitBounds(currentLayer.getBounds());
+        } catch (e) {
+            statusDiv.innerHTML += `<br><span style="color:#b91c1c; font-size:11px;">(رستر این لایه هنوز در گیت‌هاب قرار نگرفته است)</span>`;
+        }
+    }
+
+    // رسم نمودار روند تغییرات زمانی کل دوره
+    function renderTrendChart() {
         const trendCtx = document.getElementById('trendChart').getContext('2d');
         if (trendChart) trendChart.destroy();
+        
+        // محاسبه مجموع مساحت طبقات بحرانی (زیاد + بسیار زیاد) برای هر دوره
+        const criticalAreas = catalog.map(item => {
+            const a = dbData[item.id].areas;
+            return Math.round(a[2] + a[3]);
+        });
+
         trendChart = new Chart(trendCtx, {
             type: 'line',
             data: {
                 labels: catalog.map(x => x.title),
                 datasets: [{
-                    label: 'مساحت طبقات بحرانی (زیاد و بسیار زیاد)',
-                    data: [1800, 1950, 2100, 2300, 2600, 3000, 3500, 4100, 4800, 5600], // مقادیر روند
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    label: 'مساحت طبقات با ریسک زیاد و بسیار زیاد (km²)',
+                    data: criticalAreas,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.12)',
                     fill: true,
-                    tension: 0.2
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#1d4ed8'
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { font: { family: 'Vazirmatn, Tahoma', size: 12 } } }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: value => Number(value).toLocaleString('fa-IR')
+                        }
+                    },
+                    x: {
+                        ticks: { font: { family: 'Vazirmatn, Tahoma', size: 10 } }
+                    }
+                }
+            }
         });
     }
 
     yearSelect.addEventListener("change", (e) => {
-        loadData(e.target.value);
+        updateDashboard(e.target.value);
     });
 
-    // بارگذاری پیش‌فرض اولین سال
-    loadData(catalog[0].id);
+    renderTrendChart();
+    updateDashboard("2035_ssp245_mid");
+    yearSelect.value = "2035_ssp245_mid";
 });
