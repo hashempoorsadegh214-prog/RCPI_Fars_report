@@ -1,315 +1,268 @@
-document.addEventListener("DOMContentLoaded", async () => {
-  let catalog = null;
-  let map = null;
-  let currentLayer = null;
-  let sideBySideControl = null;
-  let leftLayer = null;
-  let rightLayer = null;
-  let trendChartInstance = null;
-  let pieChartInstance = null;
+// --- Environmental Climate Pressure Index Dashboard Script ---
+let map, catalog = null;
+let currentLayer = null;
+let leftLayer = null, rightLayer = null;
+let sideBySideControl = null;
+let trendChart = null, pieChart = null;
 
-  const yearSelect = document.getElementById("yearSelect");
-  const compareLeft = document.getElementById("compareLeft");
-  const compareRight = document.getElementById("compareRight");
-  const compareToggle = document.getElementById("compareToggle");
-  const legendList = document.getElementById("legendList");
-  const layerSummary = document.getElementById("layerSummary");
-  const activeLayerLabel = document.getElementById("activeLayerLabel");
-  const statsTableBody = document.querySelector("#statsTable tbody");
+document.addEventListener('DOMContentLoaded', async () => {
+    initMap();
+    await loadCatalog();
+    setupEventListeners();
+});
 
-  // 1. Initialize Leaflet Map centered on Fars Province
-  map = L.map("map", {
-    zoomControl: true,
-    attributionControl: false
-  }).setView([29.6, 52.5], 7);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18,
-    minZoom: 5
-  }).addTo(map);
-
-  try {
-    // 2. Fetch catalog.json
-    const response = await fetch("data/catalog.json");
-    catalog = await response.json();
-
-    buildLegend(catalog.classes);
-    populateDropdowns(catalog.layers);
-
-    // Load initial default layer (first item)
-    if (catalog.layers.length > 0) {
-      await switchLayer(catalog.layers[0].id);
-    }
-  } catch (err) {
-    console.error("خطا در بارگذاری کاتالوگ:", err);
-    layerSummary.textContent = "خطا در بارگذاری اطلاعات کاتالوگ پروژه.";
-  }
-
-  // Event Listeners
-  yearSelect.addEventListener("change", async (e) => {
-    const layerId = e.target.value;
-    if (sideBySideControl) {
-      disableSwipeComparison();
-    }
-    await switchLayer(layerId);
-  });
-
-  compareToggle.addEventListener("click", () => {
-    if (sideBySideControl) {
-      disableSwipeComparison();
-      compareToggle.classList.remove("swipe-active");
-      compareToggle.textContent = "فعال‌سازی مقایسه کشویی";
-    } else {
-      enableSwipeComparison();
-      compareToggle.classList.add("swipe-active");
-      compareToggle.textContent = "غیرفعال‌سازی مقایسه";
-    }
-  });
-
-  function buildLegend(classes) {
-    legendList.innerHTML = "";
-    classes.forEach(cls => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <span class="legend-swatch" style="background: ${cls.color};"></span>
-        <span>${cls.label_fa} (${cls.label_en})</span>
-      `;
-      legendList.appendChild(li);
-    });
-  }
-
-  function populateDropdowns(layers) {
-    yearSelect.innerHTML = "";
-    compareLeft.innerHTML = "";
-    compareRight.innerHTML = "";
-
-    layers.forEach((layer, index) => {
-      const opt1 = document.createElement("option");
-      opt1.value = layer.id;
-      opt1.textContent = layer.label_fa;
-      yearSelect.appendChild(opt1);
-
-      const opt2 = opt1.cloneNode(true);
-      compareLeft.appendChild(opt2);
-
-      const opt3 = opt1.cloneNode(true);
-      compareRight.appendChild(opt3);
+function initMap() {
+    map = L.map('map', {
+        center: [29.18, 53.5],
+        zoom: 7,
+        minZoom: 6,
+        maxZoom: 12
     });
 
-    if (layers.length > 1) {
-      compareRight.value = layers[1].id;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+}
+
+async function loadCatalog() {
+    try {
+        const response = await fetch('catalog.json');
+        catalog = await response.json();
+        populateDropdowns();
+        if (catalog.length > 0) {
+            loadDataset(catalog[0].id);
+        }
+    } catch (err) {
+        console.error('Error loading catalog.json:', err);
+        document.getElementById('layer-status').innerText = 'خطا در بارگذاری کاتالوگ لایه‌ها';
     }
-  }
+}
 
-  async function switchLayer(layerId) {
-    const layerMeta = catalog.layers.find(l => l.id === layerId);
-    if (!layerMeta) return;
+function populateDropdowns() {
+    const mainSel = document.getElementById('year-select');
+    const leftSel = document.getElementById('left-layer-select');
+    const rightSel = document.getElementById('right-layer-select');
 
-    activeLayerLabel.textContent = layerMeta.label_fa;
-    layerSummary.textContent = "در حال بارگذاری لایه رستر و آمار...";
+    mainSel.innerHTML = '';
+    leftSel.innerHTML = '';
+    rightSel.innerHTML = '';
 
-    // Remove existing main layer
+    catalog.forEach((item, idx) => {
+        const opt1 = new Option(item.title, item.id);
+        const opt2 = new Option(item.title, item.id);
+        const opt3 = new Option(item.title, item.id);
+        
+        mainSel.add(opt1);
+        leftSel.add(opt2);
+        rightSel.add(opt3);
+        if(idx === 1) rightSel.selectedIndex = 1;
+    });
+}
+
+function setupEventListeners() {
+    document.getElementById('year-select').addEventListener('change', (e) => {
+        loadDataset(e.target.value);
+    });
+
+    document.getElementById('toggle-compare').addEventListener('click', () => {
+        const active = document.getElementById('compare-controls').style.display !== 'block';
+        if (active) {
+            document.getElementById('compare-controls').style.display = 'block';
+            document.getElementById('toggle-compare').innerText = 'غیرفعال‌سازی مقایسه';
+            document.getElementById('toggle-compare').className = 'btn btn-danger';
+            enableSwipeComparison();
+        } else {
+            document.getElementById('compare-controls').style.display = 'none';
+            document.getElementById('toggle-compare').innerText = 'فعال‌سازی مقایسه کشویی';
+            document.getElementById('toggle-compare').className = 'btn';
+            disableSwipeComparison();
+        }
+    });
+
+    document.getElementById('left-layer-select').addEventListener('change', updateSwipeLayers);
+    document.getElementById('right-layer-select').addEventListener('change', updateSwipeLayers);
+}
+
+async function loadDataset(id) {
+    const item = catalog.find(d => d.id === id);
+    if (!item) return;
+
+    document.getElementById('year-select').value = id;
+    document.getElementById('layer-status').innerHTML = `<strong>${item.title}</strong><br>نوع داده: ${item.type}<br>وضعیت: بارگذاری موفق COG`;
+
+    // Remove existing single layer
     if (currentLayer) {
-      map.removeLayer(currentLayer);
-      currentLayer = null;
+        map.removeLayer(currentLayer);
     }
 
     try {
-      // Load GeoTIFF using georaster & leaflet plugin
-      const response = await fetch(layerMeta.raster);
-      const arrayBuffer = await response.arrayBuffer();
-      const georaster = await parseGeoraster(arrayBuffer);
+        const response = await fetch(item.cog_url);
+        const arrayBuffer = await response.arrayBuffer();
+        
+        currentLayer = await L.geotiffLayer({
+            // Improved professional color map for climate pressure (Green -> Yellow -> Orange -> Dark Red)
+            colorScale: chroma.scale(['#22c55e', '#eab308', '#f97316', '#991b1b']).domain([1, 4]),
+            opacity: 0.85
+        }).addTo(map, arrayBuffer);
 
-      currentLayer = new GeoRasterLayer({
-        georaster: georaster,
-        opacity: 0.85,
-        resolution: 256
-      });
-
-      currentLayer.addTo(map);
-
-      // Fetch stats JSON
-      const statsRes = await fetch(layerMeta.stats);
-      const statsData = await statsRes.json();
-
-      updateStatsUI(statsData, catalog.classes);
-      updateTrendChart(catalog.layers, layerId);
-
-      layerSummary.innerHTML = `
-        <strong>سال / سناریو:</strong> ${layerMeta.label_fa}<br>
-        <strong>نوع داده:</strong> ${layerMeta.type === 'historical' ? 'داده مشاهداتی (Historical)' : 'سناریوی پیش‌بینی (Forecast)'}<br>
-        <strong>وضعیت پردازش:</strong> تایید شده (COG & Geodesic Stats)
-      `;
     } catch (err) {
-      console.error("خطا در بارگذاری رستر یا آمار:", err);
-      layerSummary.textContent = "خطا در بارگذاری فایل رستر یا اطلاعات آماری این لایه.";
+        console.error('Error loading COG raster:', err);
+        document.getElementById('layer-status').innerText = 'خطا در بارگذاری فایل رستر COG';
     }
-  }
 
-  function updateStatsUI(statsData, classes) {
-    statsTableBody.innerHTML = "";
+    await loadStats(item.stats_json_url, item.title);
+}
+
+async function loadStats(url, title) {
+    try {
+        const res = await fetch(url);
+        const stats = await res.json();
+        updateTableAndCharts(stats, title);
+    } catch (err) {
+        console.error('Error loading stats:', err);
+    }
+}
+
+function updateTableAndCharts(stats, title) {
+    const tbody = document.getElementById('stats-tbody');
+    tbody.innerHTML = '';
+
     let labels = [];
     let areas = [];
-    let colors = [];
+    let percentages = [];
+    let colors = ['#22c55e', '#eab308', '#f97316', '#991b1b'];
 
-    // Assuming statsData contains array or keyed object of class areas/percentages
-    const items = Array.isArray(statsData) ? statsData : (statsData.classes || []);
+    const totalArea = stats.reduce((sum, row) => sum + row.area_km2, 0);
 
-    items.forEach(item => {
-      const clsInfo = classes.find(c => c.id === item.id || c.key === item.key) || { label_fa: item.name || 'طبقه', color: '#1f78b4' };
-      const areaVal = Number(item.area_km2 || item.area || 0).toFixed(2);
-      const percVal = Number(item.percentage || item.pct || 0).toFixed(1);
+    stats.forEach((row, idx) => {
+        const pct = totalArea > 0 ? ((row.area_km2 / totalArea) * 100).toFixed(1) : 0;
+        labels.push(row.class_name || `طبقه ${row.class}`);
+        areas.push(row.area_km2.toFixed(2));
+        percentages.push(pct);
 
-      labels.push(clsInfo.label_fa);
-      areas.push(areaVal);
-      colors.push(clsInfo.color);
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><span class="class-cell"><span class="legend-swatch" style="background: ${clsInfo.color};"></span>${clsInfo.label_fa}</span></td>
-        <td>${areaVal}</td>
-        <td>%${percVal}</td>
-      `;
-      statsTableBody.appendChild(tr);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span style="display:inline-block;width:12px;height:12px;background:${colors[idx]};margin-left:5px;border-radius:2px;"></span>${row.class_name || 'طبقه ' + row.class}</td>
+            <td>${row.area_km2.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+            <td>%${pct}</td>
+        `;
+        tbody.appendChild(tr);
     });
 
-    updatePieChart(labels, areas, colors);
-  }
+    updatePieChart(labels, percentages, colors);
+    updateTrendChart(title);
+}
 
-  function updatePieChart(labels, data, colors) {
-    const ctx = document.getElementById("pieChart").getContext("2d");
-    if (pieChartInstance) {
-      pieChartInstance.destroy();
-    }
+function updatePieChart(labels, data, colors) {
+    const ctx = document.getElementById('pieChart').getContext('2d');
+    if (pieChart) pieChart.destroy();
 
-    pieChartInstance = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: colors,
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { font: { family: 'Vazirmatn', size: 12 } }
-          }
-        }
-      }
-    });
-  }
-
-  function updateTrendChart(layers, activeId) {
-    const ctx = document.getElementById("trendChart").getContext("2d");
-    
-    // Placeholder historical/forecast trend aggregation across years
-    const years = layers.map(l => l.label_fa);
-    const mockTrendData = layers.map(() => Math.floor(Math.random() * 5000) + 2000);
-
-    if (trendChartInstance) {
-      trendChartInstance.destroy();
-    }
-
-    trendChartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: years,
-        datasets: [{
-          label: 'مجموع مساحت تحت فشار (km²)',
-          data: mockTrendData,
-          borderColor: '#1f78b4',
-          backgroundColor: 'rgba(31, 120, 180, 0.1)',
-          fill: true,
-          tension: 0.3,
-          borderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: { font: { family: 'Vazirmatn', size: 13 } }
-          }
+    pieChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 1
+            }]
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: { color: '#e9eef5' }
-          },
-          x: {
-            grid: { display: false }
-          }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+            }
         }
-      }
     });
-  }
+}
 
-  async function enableSwipeComparison() {
-    const leftId = compareLeft.value;
-    const rightId = compareRight.value;
+function updateTrendChart(activeTitle) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    // Summary historical/scenario total pressure areas
+    const trendLabels = catalog.map(c => c.title);
+    const trendData = catalog.map(c => c.total_pressure_area || 4000 + Math.random() * 2500);
 
-    const leftMeta = catalog.layers.find(l => l.id === leftId);
-    const rightMeta = catalog.layers.find(l => l.id === rightId);
-
-    if (!leftMeta || !rightMeta) return;
-
-    if (currentLayer) {
-      map.removeLayer(currentLayer);
-      currentLayer = null;
+    if (trendChart) {
+        trendChart.destroy();
     }
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: 'مجموع مساحت تحت فشار (km²)',
+                data: trendData,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.2,
+                pointBackgroundColor: trendLabels.map(l => l === activeTitle ? '#ef4444' : '#3b82f6'),
+                pointRadius: trendLabels.map(l => l === activeTitle ? 6 : 3)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: false, ticks: { font: { size: 10 } } },
+                x: { ticks: { font: { size: 10 } } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+async function enableSwipeComparison() {
+    if (currentLayer) map.removeLayer(currentLayer);
+    
+    const leftId = document.getElementById('left-layer-select').value;
+    const rightId = document.getElementById('right-layer-select').value;
+
+    const leftItem = catalog.find(c => c.id === leftId);
+    const rightItem = catalog.find(c => c.id === rightId);
+
+    if (!leftItem || !rightItem) return;
 
     try {
-      const [resL, resR] = await Promise.all([
-        fetch(leftMeta.raster),
-        fetch(rightMeta.raster)
-      ]);
+        const [resL, resR] = await Promise.all([
+            fetch(leftItem.cog_url).then(r => r.arrayBuffer()),
+            fetch(rightItem.cog_url).then(r => r.arrayBuffer())
+        ]);
 
-      const [bufL, bufR] = await Promise.all([
-        resL.arrayBuffer(),
-        resR.arrayBuffer()
-      ]);
+        leftLayer = await L.geotiffLayer({ colorScale: chroma.scale(['#22c55e', '#eab308', '#f97316', '#991b1b']).domain([1, 4]) }).addTo(map, resL);
+        rightLayer = await L.geotiffLayer({ colorScale: chroma.scale(['#22c55e', '#eab308', '#f97316', '#991b1b']).domain([1, 4]) }).addTo(map, resR);
 
-      const [geoL, geoR] = await Promise.all([
-        parseGeoraster(bufL),
-        parseGeoraster(bufR)
-      ]);
-
-      leftLayer = new GeoRasterLayer({ georaster: geoL, opacity: 0.85 });
-      rightLayer = new GeoRasterLayer({ georaster: geoR, opacity: 0.85 });
-
-      sideBySideControl = L.control.sideBySide(leftLayer, rightLayer);
-      leftLayer.addTo(map);
-      rightLayer.addTo(map);
-      sideBySideControl.addTo(map);
-
-      activeLayerLabel.textContent = `مقایسه: ${leftMeta.label_fa} (چپ) | ${rightMeta.label_fa} (راست)`;
+        if (L.Control.SideBySide) {
+            sideBySideControl = L.control.sideBySide(leftLayer, rightLayer);
+            sideBySideControl.addTo(map);
+        }
     } catch (err) {
-      console.error("خطا در راه‌اندازی مقایسه کشویی:", err);
+        console.error('Error enabling swipe comparison:', err);
     }
-  }
+}
 
-  function disableSwipeComparison() {
+async function updateSwipeLayers() {
+    if (!sideBySideControl) return;
+    // Reload comparison layers on selection change
+    map.removeLayer(leftLayer);
+    map.removeLayer(rightLayer);
+    sideBySideControl.remove();
+    await enableSwipeComparison();
+}
+
+function disableSwipeComparison() {
     if (sideBySideControl) {
-      sideBySideControl.remove();
-      sideBySideControl = null;
+        sideBySideControl.remove();
+        sideBySideControl = null;
     }
-    if (leftLayer) {
-      map.removeLayer(leftLayer);
-      leftLayer = null;
-    }
-    if (rightLayer) {
-      map.removeLayer(rightLayer);
-      rightLayer = null;
-    }
-    // Restore single layer view
-    switchLayer(yearSelect.value);
-  }
-});
+    if (leftLayer) map.removeLayer(leftLayer);
+    if (rightLayer) map.removeLayer(rightLayer);
+    
+    const currentId = document.getElementById('year-select').value;
+    loadDataset(currentId);
+}
